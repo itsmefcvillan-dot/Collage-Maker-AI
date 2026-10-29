@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Termux Studio · Collage Engine</title>
+  <title>Neural Studio · Collage Client</title>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -126,7 +126,7 @@
       background: rgba(0, 0, 0, 0.3);
       border: 1px solid var(--border);
       color: var(--text-main);
-      padding: 10px 14px;
+      padding: 12px 14px;
       border-radius: 8px;
       font-family: 'JetBrains Mono', monospace;
       font-size: 0.85rem;
@@ -168,7 +168,7 @@
   <header>
     <div class="brand">
       <h1>◈ Neural Studio</h1>
-      <p>Termux Python Collage Client</p>
+      <p>Termux / Bot-Hosting Backend Bridge</p>
     </div>
     <div class="status-badge">
       <div id="dot" class="dot"></div>
@@ -177,8 +177,8 @@
   </header>
 
   <div class="card">
-    <div class="label-title">Termux Endpoint Address</div>
-    <input type="text" id="endpoint" class="endpoint-input" value="http://127.0.0.1:8085">
+    <div class="label-title">Backend Public Endpoint Address</div>
+    <input type="text" id="endpoint" class="endpoint-input" placeholder="https://....trycloudflare.com">
   </div>
 
   <div class="card">
@@ -205,13 +205,13 @@
   </div>
 
   <button id="btn-render" class="btn-render" disabled>
-    <span>Render via Termux Engine</span>
+    <span>Render via Python Engine</span>
   </button>
 
   <div id="result-box" class="card result-container" style="display: none;">
     <div class="label-title">Render Output</div>
     <img id="result-img" class="result-img" src="" alt="Collage Result">
-    <a id="btn-download" href="#" download="termux_collage.jpg" style="text-align: center; color: var(--accent-cyan); font-weight: 700; text-decoration: none; padding: 8px;">Download Full High-Res JPEG</a>
+    <a id="btn-download" href="#" download="studio_collage.jpg" style="text-align: center; color: var(--accent-cyan); font-weight: 700; text-decoration: none; padding: 8px;">Download Full High-Res JPEG</a>
   </div>
 </div>
 
@@ -229,14 +229,33 @@
   const resultImg = document.getElementById('result-img');
   const downloadLink = document.getElementById('btn-download');
 
-  // Check Termux backend heartbeat every 3 seconds
+  function getCleanEndpoint() {
+    let base = endpointInput.value.trim().replace(/\/$/, "");
+    if (!base) return "";
+    if (!base.startsWith("http://") && !base.startsWith("https://")) {
+      base = "https://" + base;
+    }
+    return base;
+  }
+
   async function checkServer() {
-    const base = endpointInput.value.replace(/\/$/, "");
+    const base = getCleanEndpoint();
+    if (!base) {
+      dot.className = "dot";
+      statusText.textContent = "Disconnected";
+      return false;
+    }
     try {
-      const res = await fetch(`${base}/ping`, { method: 'GET', mode: 'cors' });
+      const res = await fetch(`${base}/ping`, { 
+        method: 'GET', 
+        mode: 'cors',
+        headers: {
+          'bypass-tunnel-reminder': 'true'
+        }
+      });
       if (res.ok) {
         dot.className = "dot connected";
-        statusText.textContent = "Termux Online";
+        statusText.textContent = "Backend Online";
         return true;
       }
     } catch (e) {
@@ -245,10 +264,10 @@
     }
     return false;
   }
-  setInterval(checkServer, 3000);
-  checkServer();
 
-  // Template button selection
+  endpointInput.addEventListener('input', checkServer);
+  setInterval(checkServer, 4000);
+
   document.querySelectorAll('.tpl-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.tpl-btn').forEach(b => b.classList.remove('active'));
@@ -257,7 +276,6 @@
     });
   });
 
-  // Handle files
   fileInput.addEventListener('change', (e) => {
     selectedFiles = Array.from(e.target.files);
     previewsContainer.innerHTML = '';
@@ -270,15 +288,18 @@
     renderBtn.disabled = selectedFiles.length === 0;
   });
 
-  // Execute render request to local python script
   renderBtn.addEventListener('click', async () => {
     if (selectedFiles.length === 0) return;
+    const base = getCleanEndpoint();
+    if (!base) {
+      alert("Please provide a valid backend endpoint URL.");
+      return;
+    }
 
     renderBtn.disabled = true;
-    renderBtn.textContent = 'Rendering on Termux Device...';
+    renderBtn.textContent = 'Rendering on Backend Engine...';
     resultBox.style.display = 'none';
 
-    const base = endpointInput.value.replace(/\/$/, "");
     const formData = new FormData();
     formData.append('template', selectedTemplate);
     selectedFiles.forEach(file => {
@@ -288,6 +309,9 @@
     try {
       const response = await fetch(`${base}/collage`, {
         method: 'POST',
+        headers: {
+          'bypass-tunnel-reminder': 'true'
+        },
         body: formData
       });
 
@@ -300,15 +324,13 @@
       resultImg.src = imageUrl;
       downloadLink.href = imageUrl;
       resultBox.style.display = 'flex';
-      renderBtn.textContent = 'Render via Termux Engine';
-      renderBtn.disabled = false;
     } catch (err) {
       alert(`Render failed: ${err.message}`);
-      renderBtn.textContent = 'Render via Termux Engine';
+    } finally {
+      renderBtn.textContent = 'Render via Python Engine';
       renderBtn.disabled = false;
     }
   });
 </script>
 </body>
-  </html>
-  
+</html>
