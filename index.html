@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Termux Studio · Collage Engine</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #090a0f;
+      --card-bg: rgba(18, 20, 29, 0.75);
+      --border: rgba(255, 255, 255, 0.08);
+      --accent-cyan: #00f5ff;
+      --accent-purple: #bd00ff;
+      --accent-emerald: #00ff88;
+      --text-main: #f0f3fa;
+      --text-muted: #8a93a8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg);
+      color: var(--text-main);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 30px 16px;
+    }
+    .wrapper { width: 100%; max-width: 900px; display: flex; flex-direction: column; gap: 24px; }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .brand h1 {
+      font-size: 1.4rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .brand p { font-size: 0.85rem; color: var(--text-muted); margin-top: 2px; }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+    }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #ff4757; }
+    .dot.connected { background: var(--accent-emerald); box-shadow: 0 0 10px var(--accent-emerald); }
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .label-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-muted);
+    }
+    .grid-templates {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 12px;
+    }
+    .tpl-btn {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      padding: 14px 10px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 0.82rem;
+      font-weight: 600;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+    }
+    .tpl-btn:hover { background: rgba(255, 255, 255, 0.06); border-color: rgba(255, 255, 255, 0.2); }
+    .tpl-btn.active {
+      background: rgba(0, 245, 255, 0.1);
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+    }
+    .dropzone {
+      border: 2px dashed var(--border);
+      border-radius: 14px;
+      padding: 32px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .dropzone:hover { border-color: var(--accent-cyan); background: rgba(0, 245, 255, 0.02); }
+    .previews {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .preview-thumb {
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+    .endpoint-input {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      width: 100%;
+    }
+    .btn-render {
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+      border: none;
+      color: #000;
+      font-weight: 800;
+      font-size: 0.95rem;
+      padding: 16px;
+      border-radius: 12px;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      transition: opacity 0.2s ease;
+    }
+    .btn-render:disabled { opacity: 0.4; cursor: not-allowed; }
+    .result-container {
+      margin-top: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .result-img {
+      width: 100%;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+    }
+  </style>
+</head>
+<body>
+
+<div class="wrapper">
+  <header>
+    <div class="brand">
+      <h1>◈ Neural Studio</h1>
+      <p>Termux Python Collage Client</p>
+    </div>
+    <div class="status-badge">
+      <div id="dot" class="dot"></div>
+      <span id="status-text">Disconnected</span>
+    </div>
+  </header>
+
+  <div class="card">
+    <div class="label-title">Termux Endpoint Address</div>
+    <input type="text" id="endpoint" class="endpoint-input" value="http://127.0.0.1:8085">
+  </div>
+
+  <div class="card">
+    <div class="label-title">1. Select Preset Template</div>
+    <div class="grid-templates">
+      <button class="tpl-btn active" data-tpl="polaroid"><span>📸</span> Polaroid</button>
+      <button class="tpl-btn" data-tpl="ripped"><span>📜</span> Torn Paper</button>
+      <button class="tpl-btn" data-tpl="filmstrip"><span>🎞️</span> Filmstrip</button>
+      <button class="tpl-btn" data-tpl="bento"><span>🎨</span> Bento Box</button>
+      <button class="tpl-btn" data-tpl="brutalist"><span>✨</span> Neo-Brutal</button>
+      <button class="tpl-btn" data-tpl="classic"><span>📐</span> Classic Grid</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="label-title">2. Select Photos (2 - 8 Images)</div>
+    <div class="dropzone" onclick="document.getElementById('file-input').click()">
+      <div style="font-size: 1.8rem; margin-bottom: 6px;">🖼️</div>
+      <p style="font-weight: 600;">Tap to select images from your device</p>
+      <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">PNG, JPG, or WEBP supported</p>
+      <input type="file" id="file-input" multiple accept="image/*" style="display: none;">
+    </div>
+    <div id="previews" class="previews"></div>
+  </div>
+
+  <button id="btn-render" class="btn-render" disabled>
+    <span>Render via Termux Engine</span>
+  </button>
+
+  <div id="result-box" class="card result-container" style="display: none;">
+    <div class="label-title">Render Output</div>
+    <img id="result-img" class="result-img" src="" alt="Collage Result">
+    <a id="btn-download" href="#" download="termux_collage.jpg" style="text-align: center; color: var(--accent-cyan); font-weight: 700; text-decoration: none; padding: 8px;">Download Full High-Res JPEG</a>
+  </div>
+</div>
+
+<script>
+  let selectedTemplate = 'polaroid';
+  let selectedFiles = [];
+
+  const endpointInput = document.getElementById('endpoint');
+  const dot = document.getElementById('dot');
+  const statusText = document.getElementById('status-text');
+  const fileInput = document.getElementById('file-input');
+  const previewsContainer = document.getElementById('previews');
+  const renderBtn = document.getElementById('btn-render');
+  const resultBox = document.getElementById('result-box');
+  const resultImg = document.getElementById('result-img');
+  const downloadLink = document.getElementById('btn-download');
+
+  // Check Termux backend heartbeat every 3 seconds
+  async function checkServer() {
+    const base = endpointInput.value.replace(/\/$/, "");
+    try {
+      const res = await fetch(`${base}/ping`, { method: 'GET', mode: 'cors' });
+      if (res.ok) {
+        dot.className = "dot connected";
+        statusText.textContent = "Termux Online";
+        return true;
+      }
+    } catch (e) {
+      dot.className = "dot";
+      statusText.textContent = "Disconnected";
+    }
+    return false;
+  }
+  setInterval(checkServer, 3000);
+  checkServer();
+
+  // Template button selection
+  document.querySelectorAll('.tpl-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tpl-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedTemplate = btn.getAttribute('data-tpl');
+    });
+  });
+
+  // Handle files
+  fileInput.addEventListener('change', (e) => {
+    selectedFiles = Array.from(e.target.files);
+    previewsContainer.innerHTML = '';
+    selectedFiles.forEach(file => {
+      const img = document.createElement('img');
+      img.className = 'preview-thumb';
+      img.src = URL.createObjectURL(file);
+      previewsContainer.appendChild(img);
+    });
+    renderBtn.disabled = selectedFiles.length === 0;
+  });
+
+  // Execute render request to local python script
+  renderBtn.addEventListener('click', async () => {
+    if (selectedFiles.length === 0) return;
+
+    renderBtn.disabled = true;
+    renderBtn.textContent = 'Rendering on Termux Device...';
+    resultBox.style.display = 'none';
+
+    const base = endpointInput.value.replace(/\/$/, "");
+    const formData = new FormData();
+    formData.append('template', selectedTemplate);
+    selectedFiles.forEach(file => {
+      formData.append('images', file);
+    });
+
+    try {
+      const response = await fetch(`${base}/collage`, {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      const blob = await response.blob();
+      const imageUrl = URL.createObjectURL(blob);
+      resultImg.src = imageUrl;
+      downloadLink.href = imageUrl;
+      resultBox.style.display = 'flex';
+      renderBtn.textContent = 'Render via Termux Engine';
+      renderBtn.disabled = false;
+    } catch (err) {
+      alert(`Render failed: ${err.message}`);
+      renderBtn.textContent = 'Render via Termux Engine';
+      renderBtn.disabled = false;
+    }
+  });
+</script>
+</body>
+  </html>
+  
